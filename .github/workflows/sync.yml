@@ -1,0 +1,58 @@
+name: Sync & Deploy
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # 每15分钟
+  workflow_dispatch:           # 手动触发
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  sync-and-deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install blackboxprotobuf openpyxl
+
+      - name: Sync from Tencent Docs
+        run: python tdoc_sync.py
+
+      - name: Build HTML dashboard
+        run: python build_standalone.py
+
+      - name: Copy to Pages
+        run: |
+          mkdir -p _site
+          cp 周会数据看板.html _site/index.html
+          cp tdoc_data.json _site/
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Commit updated data
+        run: |
+          git config user.name "Dashboard Bot"
+          git config user.email "bot@dashboard.local"
+          git add tdoc_data.json 周会数据看板.html
+          git diff --staged --quiet || (git commit -m "Auto sync $(date -u +'%Y-%m-%d %H:%M UTC')" && git push)
