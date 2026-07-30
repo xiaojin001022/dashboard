@@ -210,7 +210,7 @@ async function autoRefresh() {
     // GitHub Pages: 使用内嵌数据，每15分钟自动同步（由 GitHub Actions 驱动）
     ALL_DATA = EMBEDDED_DATA;
     serverAvailable = false;
-    setStatus('数据每15分钟自动同步（GitHub Actions）', true);
+    setStatus('数据每5分钟自动同步（GitHub Actions）', true);
     document.getElementById('btnSync').style.display = 'none';
     buildNav();
     renderAll();
