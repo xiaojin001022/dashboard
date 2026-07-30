@@ -53,7 +53,7 @@ tr:nth-child(even) td{background:rgba(30,41,59,.5);}
 <div class="sidebar">
   <h2>周会数据看板</h2>
   <div class="subtitle">整车制造部</div>
-  <button class="btn btn-sync" onclick="syncFromTencentDoc()" id="btnSync">☁️ 从腾讯文档同步</button>
+  <button class="btn btn-sync" onclick="syncFromTencentDoc()" id="btnSync" style="display:none">☁️ 从腾讯文档同步</button>
   <div class="status" id="status">数据已加载</div>
   <nav id="nav"></nav>
 </div>
@@ -154,11 +154,36 @@ async function autoRefresh() {
 
 // 页面初始化
 (async function init() {
-  await loadFromServer();
-  buildNav();
-  renderAll();
-  showSection(curSec);
-  setInterval(autoRefresh, AUTO_REFRESH_INTERVAL);
+  // 检测运行环境
+  var isGitHubPages = window.location.hostname.includes('github.io');
+  var isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+  if (isGitHubPages) {
+    // GitHub Pages: 使用内嵌数据，每15分钟自动同步（由 GitHub Actions 驱动）
+    ALL_DATA = EMBEDDED_DATA;
+    serverAvailable = false;
+    setStatus('数据每15分钟自动同步（GitHub Actions）', true);
+    document.getElementById('btnSync').style.display = 'none';
+    buildNav();
+    renderAll();
+    showSection(curSec);
+  } else if (isLocal) {
+    // 本地环境：尝试连接服务器，显示同步按钮
+    document.getElementById('btnSync').style.display = 'inline-block';
+    await loadFromServer();
+    buildNav();
+    renderAll();
+    showSection(curSec);
+    setInterval(autoRefresh, AUTO_REFRESH_INTERVAL);
+  } else {
+    // 其他环境（如 localhost.run 隧道）：也尝试连接服务器
+    document.getElementById('btnSync').style.display = 'inline-block';
+    await loadFromServer();
+    buildNav();
+    renderAll();
+    showSection(curSec);
+    setInterval(autoRefresh, AUTO_REFRESH_INTERVAL);
+  }
 })();
 
 // ====== 工具函数 ======
