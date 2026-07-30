@@ -38,7 +38,7 @@ jobs:
       - name: Copy to Pages
         run: |
           mkdir -p _site
-          cp 周会数据看板.html _site/index.html
+          cp index.html _site/index.html
           cp tdoc_data.json _site/
 
       - name: Upload artifact
@@ -54,5 +54,5 @@ jobs:
         run: |
           git config user.name "Dashboard Bot"
           git config user.email "bot@dashboard.local"
-          git add tdoc_data.json 周会数据看板.html
+          git add tdoc_data.json index.html
           git diff --staged --quiet || (git commit -m "Auto sync $(date -u +'%Y-%m-%d %H:%M UTC')" && git push)

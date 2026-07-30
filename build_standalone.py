@@ -14,7 +14,7 @@ import json, sys, os, io
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 EXCEL_JSON = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'tdoc_data.json')
-OUTPUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), '周会数据看板.html')
+OUTPUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'index.html')
 
 # 优先从 tdoc_data.json（腾讯文档同步数据）读取
 try:
