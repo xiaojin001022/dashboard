@@ -489,11 +489,14 @@ function renderChangeover(){
   if(!data)return'<div class="section" id="s9"><h3>切线次数</h3><p style="color:#ef4444">数据不可用</p></div>';
   var allNames=data[0].slice(1).filter(function(n){return n;});
   var allVals=data[1].slice(1,allNames.length+1).map(num);
-  // 分离汇总和普通线体
+  // 分离汇总和普通线体（总切线次数 = 各线体之和，不读源数据"汇总"单元格，避免源数据未同步导致总计不更新）
   var lineNames=[],values=[],totalVal=0;
   for(var i=0;i<allNames.length;i++){
-    if(allNames[i]==='汇总'){totalVal=allVals[i]||0;}
-    else{lineNames.push(allNames[i]);values.push(allVals[i]||0);}
+    if(allNames[i]==='汇总'){continue;}
+    lineNames.push(allNames[i]);
+    var v=allVals[i]||0;
+    values.push(v);
+    totalVal+=v;
   }
   var h='<div class="section" id="s9"><h3>切线次数</h3>';
   h+='<div class="kpi-grid"><div class="kpi-card"><div class="label">总切线次数</div><div class="value">'+totalVal+'</div></div></div>';
@@ -657,8 +660,10 @@ window.addEventListener('resize',function(){
   for(var i=0;i<boxes.length;i++){var c=echarts.getInstanceByDom(boxes[i]);if(c)c.resize();}
 });
 
-// 键盘导航
+// 键盘导航（输入框中不触发，避免搜索时跳页）
 document.addEventListener('keydown',function(e){
+  var t=e.target;
+  if(t && (t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
   var n=parseInt(e.key);
   if(n>=0&&n<=9&&SECTIONS[n-1])showSection(SECTIONS[n-1].id);
 });
