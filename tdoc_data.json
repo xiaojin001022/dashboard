@@ -1,7 +1,7 @@
 {
   "source": "tencent_docs",
   "doc_id": "DU1hxbXJkZFBXRnVw",
-  "generated_at": "2026-08-03 00:49:13",
+  "generated_at": "2026-08-03 01:00:06",
   "sheets": {
     "年生产计划数据汇总": {
       "rows": 11,
@@ -1594,7 +1594,7 @@
         ],
         [
           "切线次数",
-          3,
+          0.0,
           0.0,
           2.0,
           7.0,
