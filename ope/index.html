@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OPE 看板 · 1F/2F</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+<style>
+  :root{
+    --bg:#fff; --card:#fff; --card-border:#e6ebf2;
+    --text:#1b2230; --text-2:#5b6575; --text-3:#9098a6;
+    --accent:#2f6fe0; --accent-2:#4f83e8;
+    --green:#2f9e44; --orange:#e07b2e; --red:#d64541; --purple:#7c3aed; --cyan:#0891b2;
+    --grad-blue:linear-gradient(135deg,#4f83e8 0%,#2f6fe0 100%);
+    --grad-green:linear-gradient(135deg,#34a952 0%,#2f9e44 100%);
+    --grad-orange:linear-gradient(135deg,#ef9338 0%,#e07b2e 100%);
+    --grad-red:linear-gradient(135deg,#e57373 0%,#d64541 100%);
+    --grad-purple:linear-gradient(135deg,#a78bfa 0%,#7c3aed 100%);
+    --shadow:0 4px 16px rgba(23,43,77,.06);
+    --shadow-sm:0 2px 6px rgba(23,43,77,.04);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{min-height:100%;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:#fff;color:var(--text);padding:18px 24px 40px;line-height:1.5;-webkit-font-smoothing:antialiased;
+  }
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px;}
+  .brand{display:flex;align-items:center;gap:12px;}
+  .logo{width:42px;height:42px;border-radius:10px;background:linear-gradient(135deg,#4f83e8,#2f6fe0);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:18px;box-shadow:0 4px 12px rgba(47,111,224,.25);}
+  .brand-text h1{font-size:20px;font-weight:700;letter-spacing:.3px;}
+  .brand-text .sub{font-size:12px;color:var(--text-2);margin-top:2px;}
+  .tag{font-size:9px;background:var(--grad-green);color:#fff;padding:2px 7px;border-radius:999px;font-weight:600;letter-spacing:.5px;margin-left:6px;}
+  .actions{display:flex;align-items:center;gap:10px;}
+  .last-update{font-size:11px;color:var(--text-2);text-align:right;line-height:1.4;}
+  .last-update .time{color:var(--text);font-weight:500;font-size:13px;}
+  .btn{background:#fff;border:1px solid var(--card-border);color:var(--text);padding:8px 14px;border-radius:8px;cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:6px;transition:all .2s;}
+  .btn:hover{background:#f5f7fc;border-color:rgba(47,111,224,.4);}
+  .btn-primary{background:var(--grad-blue);border:none;color:#fff;font-weight:500;box-shadow:0 4px 12px rgba(47,111,224,.25);}
+  .btn-primary:hover{box-shadow:0 6px 18px rgba(47,111,224,.4);transform:translateY(-1px);}
+  .btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+
+  /* 过滤栏 */
+  .filter-bar{background:#fff;border:1px solid var(--card-border);border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:var(--shadow-sm);}
+  .filter-bar label{font-size:12px;color:var(--text-2);font-weight:500;}
+  .filter-bar select,.filter-bar input{background:#fff;border:1px solid var(--card-border);border-radius:6px;padding:6px 10px;color:var(--text);font-size:13px;outline:none;transition:border .2s;}
+  .filter-bar select:focus,.filter-bar input:focus{border-color:var(--accent);}
+  .filter-bar .spacer{flex:1;}
+  .filter-bar .chip{display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:500;cursor:pointer;border:1.5px solid var(--card-border);background:#fff;transition:all .15s;}
+  .filter-bar .chip:hover{border-color:var(--accent-2);}
+  .filter-bar .chip.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .filter-count{font-size:11px;color:var(--text-3);}
+
+  /* KPI */
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px;}
+  .kpi{background:#fff;border:1px solid var(--card-border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden;transition:all .2s;box-shadow:var(--shadow-sm);}
+  .kpi:hover{transform:translateY(-2px);border-color:rgba(47,111,224,.3);box-shadow:var(--shadow);}
+  .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);}
+  .kpi.green::before{background:var(--green);} .kpi.orange::before{background:var(--orange);}
+  .kpi.red::before{background:var(--red);} .kpi.purple::before{background:var(--purple);} .kpi.cyan::before{background:var(--cyan);}
+  .kpi-label{font-size:11px;color:var(--text-2);letter-spacing:.3px;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+  .kpi-label .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);}
+  .kpi.green .dot{background:var(--green);} .kpi.orange .dot{background:var(--orange);} .kpi.red .dot{background:var(--red);} .kpi.purple .dot{background:var(--purple);} .kpi.cyan .dot{background:var(--cyan);}
+  .kpi-value{font-size:22px;font-weight:700;letter-spacing:-.5px;color:var(--text);}
+  .kpi-value .unit{font-size:11px;color:var(--text-2);font-weight:400;margin-left:4px;}
+  .kpi-delta{font-size:11px;margin-top:4px;color:var(--text-2);}
+  .kpi-delta.up{color:var(--green);} .kpi-delta.down{color:var(--red);}
+  .kpi-bar{height:4px;background:#eef2f7;border-radius:2px;margin-top:8px;overflow:hidden;}
+  .kpi-bar>span{display:block;height:100%;border-radius:2px;transition:width .6s ease;}
+
+  /* 面板 */
+  .panel{background:#fff;border:1px solid var(--card-border);border-radius:12px;padding:16px 18px;box-shadow:var(--shadow-sm);margin-bottom:16px;}
+  .panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;}
+  .panel-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;}
+  .panel-title .dot{width:8px;height:8px;border-radius:2px;background:var(--grad-blue);}
+  .panel-title .dot.green{background:var(--grad-green);} .panel-title .dot.orange{background:var(--grad-orange);} .panel-title .dot.red{background:var(--grad-red);} .panel-title .dot.purple{background:var(--grad-purple);}
+  .panel-sub{font-size:11px;color:var(--text-3);}
+  .chart{width:100%;height:320px;}
+  .chart-lg{width:100%;height:380px;}
+
+  /* 分析文本 */
+  .analysis-panel{background:linear-gradient(135deg,rgba(47,111,224,.04) 0%,rgba(79,131,232,.02) 100%);border:1px solid rgba(47,111,224,.15);border-left:3px solid var(--accent);border-radius:10px;padding:14px 16px;}
+  .analysis-panel.warn{background:linear-gradient(135deg,rgba(214,69,65,.04) 0%,rgba(224,123,46,.02) 100%);border-color:rgba(214,69,65,.15);border-left-color:var(--red);}
+  .analysis-panel.ok{background:linear-gradient(135deg,rgba(47,158,68,.04) 0%,rgba(52,169,82,.02) 100%);border-color:rgba(47,158,68,.15);border-left-color:var(--green);}
+  .analysis-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+  .analysis-body{font-size:12.5px;color:var(--text-2);line-height:1.7;}
+  .analysis-body b{color:var(--text);font-weight:600;}
+  .analysis-body .hl-red{color:var(--red);font-weight:600;} .analysis-body .hl-green{color:var(--green);font-weight:600;} .analysis-body .hl-orange{color:var(--orange);font-weight:600;}
+
+  /* 表格 */
+  .table-wrap{overflow:auto;border-radius:8px;max-height:560px;}
+  .detail-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;background:#fafbfd;border:1px solid var(--card-border);border-radius:8px;margin-bottom:8px;}
+  .detail-toolbar label{font-size:12px;color:var(--text-2);font-weight:500;}
+  .detail-toolbar select{background:#fff;border:1px solid var(--card-border);border-radius:6px;padding:5px 10px;color:var(--text);font-size:12px;outline:none;transition:border .2s;}
+  .detail-toolbar select:focus{border-color:var(--accent);}
+  .detail-toolbar .spacer{flex:1;}
+  .detail-toolbar .filter-count{font-size:11px;color:var(--text-3);}
+  .btn-small{background:#fff;border:1px solid var(--card-border);border-radius:6px;padding:5px 12px;font-size:12px;color:var(--text-2);cursor:pointer;transition:all .15s;}
+  .btn-small:hover{border-color:var(--accent);color:var(--accent);}
+  table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;}
+  thead th{background:#f5f7fc;color:var(--text-2);font-weight:600;padding:9px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--card-border);position:sticky;top:0;z-index:1;}
+  thead th:first-child{text-align:left;border-top-left-radius:8px;}
+  thead th:last-child{border-top-right-radius:8px;}
+  tbody td{padding:7px 12px;text-align:right;white-space:nowrap;border-bottom:1px solid #eef2f7;color:var(--text);}
+  tbody td:first-child{text-align:left;color:var(--accent-2);font-weight:500;}
+  tbody tr:hover td{background:#f8faff;}
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr.total td{background:#f5f7fc;font-weight:600;}
+  td.neg{color:var(--red);font-weight:500;} td.pos{color:var(--green);font-weight:500;} td.rate{color:var(--accent-2);font-weight:600;}
+  .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:600;}
+  .b-blue{background:#eff6ff;color:#2563eb;} .b-green{background:#f0fdf4;color:#16a34a;} .b-orange{background:#fef3e2;color:#c2410c;} .b-red{background:#fef2f2;color:#dc2626;} .b-gray{background:#f1f5f9;color:#475569;}
+
+  #status{font-size:12px;color:var(--text-2);min-width:120px;text-align:right;}
+  .error{color:var(--red)!important;} .success{color:var(--green)!important;}
+  .empty{padding:60px 20px;text-align:center;color:var(--text-3);}
+  [hidden]{display:none!important;}
+  footer{margin-top:24px;padding-top:14px;border-top:1px solid var(--card-border);text-align:center;color:var(--text-3);font-size:11px;}
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:3px;}
+  ::-webkit-scrollbar-thumb:hover{background:#94a3b8;}
+  @media (max-width:1100px){.kpi-row{grid-template-columns:repeat(2,1fr);}}
+  .exc-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+  @media (max-width:900px){.exc-row{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">OP</div>
+    <div class="brand-text">
+      <h1>OPE 看板 · 1F / 2F <span class="tag">企微实时</span></h1>
+      <div class="sub">标准工时 / 投入工时 · 月度 · 周度 · 八月每日</div>
+    </div>
+  </div>
+  <div class="actions">
+    <div class="last-update"><div>最后同步</div><div class="time" id="syncTime">--</div></div>
+    <span class="badge badge-static" id="staticBadge" style="display:none;background:#fff3e0;color:#bf6a00;border:1px solid #f0b96d;padding:4px 10px;font-size:11px;">静态快照</span>
+    <button class="btn" onclick="testCookie()">连接</button>
+    <button class="btn btn-primary" id="btnSync" onclick="triggerSync()">⟳ 同步</button>
+  </div>
+</header>
+
+<div id="status"></div>
+
+<!-- 过滤栏 -->
+<div class="filter-bar">
+  <label>视图:</label>
+  <div class="chip active" data-view="month" onclick="switchView('month')">月度</div>
+  <div class="chip" data-view="week" onclick="switchView('week')">周度</div>
+  <div class="chip" data-view="daily_aug" onclick="switchView('daily_aug')">八月每日</div>
+  <div class="chip" data-view="daily_all" onclick="switchView('daily_all')">全部每日</div>
+  <div class="spacer"></div>
+  <label>筛选:</label>
+  <select id="filterMonth" onchange="applyFilter()"><option value="">全部月份</option></select>
+  <select id="filterWeek" onchange="applyFilter()"><option value="">全部周</option></select>
+  <input type="text" id="searchInput" placeholder="搜索工位/车型/日期..." style="width:200px;" oninput="applyFilter()">
+  <span class="filter-count" id="filterCount"></span>
+</div>
+
+<!-- KPI -->
+<div id="kpiRow" class="kpi-row"></div>
+
+<!-- 动态分析 -->
+<div id="analysisBox"></div>
+
+<!-- 月度对比图 -->
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title"><span class="dot"></span><span id="compareTitle">月度 OPE 对比</span></div>
+    <div class="panel-sub" id="compareSub">--</div>
+  </div>
+  <div id="chartCompare" class="chart-lg"></div>
+</div>
+
+<!-- 周度趋势 -->
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title"><span class="dot green"></span><span>周度 OPE 趋势</span></div>
+    <div class="panel-sub" id="weekSub">--</div>
+  </div>
+  <div id="chartWeek" class="chart"></div>
+</div>
+
+<!-- 标准工时 vs 投入工时 -->
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title"><span class="dot orange"></span><span>标准工时 vs 投入工时</span></div>
+    <div class="panel-sub" id="hoursSub">--</div>
+  </div>
+  <div id="chartHours" class="chart"></div>
+</div>
+
+<!-- 异常工时分析 -->
+<div class="exc-row">
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title"><span class="dot red"></span><span>异常工时趋势</span></div>
+      <div class="panel-sub" id="excSub">--</div>
+    </div>
+    <div id="chartException" class="chart"></div>
+  </div>
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title"><span class="dot red"></span><span>异常类型分布</span></div>
+      <div class="panel-sub">按异常工时占比</div>
+    </div>
+    <div id="chartExcType" class="chart"></div>
+  </div>
+</div>
+
+<!-- 数据明细 -->
+<div class="panel">
+  <div class="panel-header">
+    <div class="panel-title"><span class="dot purple"></span><span>数据明细</span></div>
+    <div class="panel-sub" id="tableSub">--</div>
+  </div>
+  <!-- 数据明细专用筛选 -->
+  <div class="detail-toolbar">
+    <label>工位:</label>
+    <select id="detailWs" onchange="applyDetailFilter()">
+      <option value="">全部</option>
+      <option value="1F">1F</option>
+      <option value="2F">2F</option>
+    </select>
+    <label>车型:</label>
+    <select id="detailCt" onchange="applyDetailFilter()"><option value="">全部车型</option></select>
+    <label>排序:</label>
+    <select id="detailSort" onchange="applyDetailFilter()">
+      <option value="date_asc">日期↑</option>
+      <option value="date_desc">日期↓</option>
+      <option value="ope_desc">OPE↓</option>
+      <option value="qty_desc">产量↓</option>
+      <option value="std_desc">标准工时↓</option>
+    </select>
+    <button class="btn-small" onclick="resetDetailFilter()">重置</button>
+    <span class="spacer"></span>
+    <span class="filter-count" id="detailCount"></span>
+  </div>
+  <div class="table-wrap">
+    <table id="detailTable">
+      <thead><tr id="detailHead"></tr></thead>
+      <tbody id="detailBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<footer>OPE 看板 · 数据来源：企微文档 e3_ATkA4gayAOICNFo9kx1IuS52raIwI · 端口 8767</footer>
+
+<script>
+// ============ 全局状态 ============
+let DATA = null;
+let VIEW = 'month'; // month | week | daily_aug | daily_all
+let FILTER = { month: '', week: '', search: '' };
+let DETAIL_FILTER = { workStation: '', carType: '', sortBy: 'date_asc' };
+let chartCompare, chartWeek, chartHours, chartException, chartExcType;
+
+// ============ 工具函数 ============
+function excelSerialToDate(serial){
+  // Excel 1900 epoch: serial 1 = 1900-01-01; 但 Excel 把 1900 当闰年（bug）
+  // serial 46031 = 2026-01-01
+  // JS: new Date((serial - 25569) * 86400 * 1000)
+  if (typeof serial !== 'number') return null;
+  const d = new Date((serial - 25569) * 86400 * 1000);
+  return d;
+}
+function fmtDate(d){
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function fmtMonth(d){
+  if (!d) return '';
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function weekOfYear(d){
+  // ISO week number
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(),0,1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+function cwLabel(d){
+  // CW02 格式
+  const wk = weekOfYear(d);
+  return 'CW' + String(wk).padStart(2,'0');
+}
+function monthLabel(d){
+  return (d.getMonth()+1) + '月';
+}
+function pct(v, digits=1){
+  if (v == null || isNaN(v)) return '--';
+  return (v * 100).toFixed(digits) + '%';
+}
+function num(v, digits=1){
+  if (v == null || isNaN(v)) return '--';
+  return Number(v).toFixed(digits);
+}
+
+// ============ 解析数据 ============
+function findSheet(name){
+  if (!DATA || !DATA.tabs) return null;
+  return DATA.tabs.find(t => t.name && t.name.includes(name) && t.grid);
+}
+function parse1FStd(grid){
+  // cols: 0=工位, 1=车型, 2-7=各工序/s, 8=标准工时/s(公式列,不用)
+  // 按表格列统计: 不同车型操作流程不同, 只把有数值的工序列加起来, "/" 或空跳过
+  // 注意: 车型可能为空 (R11 行 = M3-26, std=98), 这种行也要保留 (key 为 null)
+  // 车型统一转大写, 避免生产日报表里 Fz/FZ 大小写不一致导致匹配不上
+  const map = {};
+  for (let r=1; r<grid.length; r++){
+    const row = grid[r];
+    const ct = row[1];
+    if (ct === '汇总' || ct === '总计' || ct === '平均') continue;
+    let std = 0;
+    for (let c=2; c<=7; c++){
+      const v = row[c];
+      if (typeof v === 'number' && v > 0) std += v;
+    }
+    if (std > 0){
+      const key = ct ? String(ct).toUpperCase() : null;
+      map[key] = std;
+    }
+  }
+  return map;
+}
+function parse2FStd(grid){
+  // cols: 0=工位, 1=车型, 2-4=各工序/s, 5=标准工时/s(公式列,不用)
+  // 2F 标准工时 = 各工序列之和 × 1.05 (经 numbers 池公式结果验证)
+  // 车型统一转大写
+  const FACTOR = 1.05;
+  const map = {};
+  for (let r=1; r<grid.length; r++){
+    const row = grid[r];
+    const ct = row[1];
+    if (ct === '汇总' || ct === '总计' || ct === '平均') continue;
+    let std = 0;
+    for (let c=2; c<=4; c++){
+      const v = row[c];
+      if (typeof v === 'number' && v > 0) std += v;
+    }
+    if (std > 0){
+      const key = ct ? String(ct).toUpperCase() : null;
+      map[key] = std * FACTOR;
+    }
+  }
+  return map;
+}
+function parseProduction(grid){
+  // cols: 0=日期(serial), 1=工位, 2=车型, 3=数量, 4=车型工时(formula), 5=周别, 6=月份
+  const records = [];
+  for (let r=1; r<grid.length; r++){
+    const row = grid[r];
+    const ds = row[0];
+    const ws = row[1];
+    const ct = row[2];
+    const qty = row[3];
+    if (typeof ds !== 'number' || !ws || !ct || typeof qty !== 'number') continue;
+    const date = excelSerialToDate(ds);
+    records.push({
+      date, dateSerial: ds,
+      workStation: ws,
+      carType: ct,
+      quantity: qty,
+      week: weekOfYear(date),
+      month: date.getMonth()+1,
+      year: date.getFullYear(),
+    });
+  }
+  return records;
+}
+function parseAttendance(grid){
+  // cols: 0=日期, 1=工位, 2=出勤人力, 3=出勤工时/H, 4=异常说明, 5=周别, 6=月份
+  const records = [];
+  for (let r=1; r<grid.length; r++){
+    const row = grid[r];
+    const ds = row[0];
+    const ws = row[1];
+    const hc = row[2];
+    const hours = row[3];
+    if (typeof ds !== 'number' || !ws) continue;
+    const date = excelSerialToDate(ds);
+    records.push({
+      date, dateSerial: ds,
+      workStation: ws,
+      headcount: typeof hc === 'number' ? hc : 0,
+      hours: typeof hours === 'number' ? hours : 0,
+      note: row[4] || '',
+      week: weekOfYear(date),
+      month: date.getMonth()+1,
+      year: date.getFullYear(),
+    });
+  }
+  return records;
+}
+
+// ============ 计算每条生产记录的标准工时 ============
+function parseException(grid){
+  // 异常工时 sheet: 0=日期, 1=工位, 2=异常开始(小数时间,0.833=20:00), 3=异常结束, 4=异常类型, 5=出勤人力, 6/7=公式列(空), 8=说明, 9=周别, 10=月份
+  // 异常时长(H) = (结束 - 开始) × 24 ; 异常工时 = 时长 × 出勤人力
+  const records = [];
+  if (!grid) return records;
+  for (let r=1; r<grid.length; r++){
+    const row = grid[r];
+    const ds = row[0];
+    const ws = row[1];
+    const start = row[2];
+    const end = row[3];
+    const type = row[4];
+    const hc = row[5];
+    if (typeof ds !== 'number' || !ws || typeof start !== 'number' || typeof end !== 'number') continue;
+    const date = excelSerialToDate(ds);
+    const duration = Math.max(0, (end - start) * 24);
+    const headcount = typeof hc === 'number' ? hc : 0;
+    const excHour = duration * headcount;
+    records.push({
+      date, dateSerial: ds,
+      workStation: ws,
+      type: type || '未分类',
+      headcount,
+      durationHour: +duration.toFixed(2),
+      excHour: +excHour.toFixed(2),
+      note: row[8] || '',
+      week: weekOfYear(date),
+      month: date.getMonth()+1,
+      year: date.getFullYear(),
+    });
+  }
+  return records;
+}
+
+// ============ 计算每条生产记录的标准工时 ============
+function enrichProduction(prod, std1F, std2F){
+  for (const r of prod){
+    // 车型统一转大写, 避免生产日报表 Fz/FZ 大小写不一致
+    const ctKey = r.carType ? String(r.carType).toUpperCase() : null;
+    const std = r.workStation === '1F' ? std1F[ctKey] : std2F[ctKey];
+    if (std == null){
+      r.stdTimeSec = null;
+      r.stdTimeHour = null;
+      r.missingStd = true;
+    } else {
+      r.stdTimeSec = std * r.quantity;
+      r.stdTimeHour = r.stdTimeSec / 3600;
+      r.missingStd = false;
+    }
+  }
+}
+
+// ============ 聚合 ============
+function aggregate(prod, att, keyFn, exc){
+  // 按 keyFn(record) 聚合，分别对 1F/2F 汇总标准工时和投入工时
+  const buckets = {};
+  const attMap = {};
+  for (const a of att){
+    const k = keyFn(a) + '|' + a.workStation;
+    if (!attMap[k]) attMap[k] = {hours:0, headcount:0, count:0};
+    attMap[k].hours += a.hours;
+    attMap[k].headcount += a.headcount;
+    attMap[k].count++;
+  }
+  const excMap = {};
+  if (exc){
+    for (const e of exc){
+      const k = keyFn(e) + '|' + e.workStation;
+      if (!excMap[k]) excMap[k] = {excHour:0, excCount:0, byType:{}};
+      excMap[k].excHour += e.excHour;
+      excMap[k].excCount++;
+      excMap[k].byType[e.type] = (excMap[k].byType[e.type] || 0) + e.excHour;
+    }
+  }
+  for (const r of prod){
+    const k = keyFn(r) + '|' + r.workStation;
+    if (!buckets[k]) buckets[k] = {stdHour:0, inputHour:0, qty:0, recCount:0, missingCount:0, excHour:0, excCount:0, byType:{}};
+    buckets[k].qty += r.quantity;
+    buckets[k].recCount++;
+    if (r.stdTimeHour != null){
+      buckets[k].stdHour += r.stdTimeHour;
+    } else {
+      buckets[k].missingCount++;
+    }
+  }
+  // merge att + exc
+  for (const k of Object.keys(buckets)){
+    const a = attMap[k];
+    if (a) buckets[k].inputHour = a.hours;
+    const e = excMap[k];
+    if (e){
+      buckets[k].excHour = e.excHour;
+      buckets[k].excCount = e.excCount;
+      buckets[k].byType = e.byType;
+    }
+  }
+  // compute OPE
+  for (const k of Object.keys(buckets)){
+    const b = buckets[k];
+    b.ope = b.inputHour > 0 ? b.stdHour / b.inputHour : null;
+    b.excRate = b.inputHour > 0 ? b.excHour / b.inputHour : null;
+    b.netOpe = (b.inputHour - b.excHour) > 0 ? b.stdHour / (b.inputHour - b.excHour) : null;
+  }
+  return buckets;
+}
+
+// ============ 渲染 ============
+function render(){
+  if (!DATA) return;
+  const sheet1F = findSheet('车型标准(1F)');
+  const sheet2F = findSheet('车型标准(2F)');
+  const sheetProd = findSheet('生产日报表');
+  const sheetAtt = findSheet('出勤工时表');
+  if (!sheet1F || !sheet2F || !sheetProd || !sheetAtt){
+    document.getElementById('analysisBox').innerHTML = '<div class="analysis-panel warn"><div class="analysis-title">⚠ 数据不完整</div><div class="analysis-body">请检查企微文档是否包含: 车型标准(1F)、车型标准(2F)、生产日报表、出勤工时表</div></div>';
+    return;
+  }
+  const std1F = parse1FStd(sheet1F.grid);
+  const std2F = parse2FStd(sheet2F.grid);
+  const prod = parseProduction(sheetProd.grid);
+  const att = parseAttendance(sheetAtt.grid);
+  const sheetExc = findSheet('异常工时');
+  const exc = sheetExc ? parseException(sheetExc.grid) : [];
+  enrichProduction(prod, std1F, std2F);
+
+  window._DATA = {std1F, std2F, prod, att, exc};
+
+  // 填充过滤下拉
+  populateFilters(prod, att, exc);
+  // 渲染所有
+  renderKPI();
+  renderAnalysis();
+  renderCompareChart();
+  renderWeekChart();
+  renderHoursChart();
+  renderExceptionChart();
+  renderDetailTable();
+}
+
+function populateFilters(prod, att, exc){
+  const months = new Set();
+  const weeks = new Set();
+  for (const r of prod){
+    months.add(`${r.year}-${String(r.month).padStart(2,'0')}`);
+    weeks.add(`${r.year}-CW${String(r.week).padStart(2,'0')}`);
+  }
+  for (const a of att){
+    months.add(`${a.year}-${String(a.month).padStart(2,'0')}`);
+    weeks.add(`${a.year}-CW${String(a.week).padStart(2,'0')}`);
+  }
+  if (exc){
+    for (const e of exc){
+      months.add(`${e.year}-${String(e.month).padStart(2,'0')}`);
+      weeks.add(`${e.year}-CW${String(e.week).padStart(2,'0')}`);
+    }
+  }
+  const mSel = document.getElementById('filterMonth');
+  const wSel = document.getElementById('filterWeek');
+  mSel.innerHTML = '<option value="">全部月份</option>' + [...months].sort().map(m => `<option value="${m}">${m}</option>`).join('');
+  wSel.innerHTML = '<option value="">全部周</option>' + [...weeks].sort().map(w => `<option value="${w}">${w}</option>`).join('');
+
+  // 数据明细的车型下拉框
+  const carTypes = new Set();
+  for (const r of prod){
+    if (r.carType) carTypes.add(r.carType);
+    else carTypes.add('(空车型)');
+  }
+  const ctSel = document.getElementById('detailCt');
+  const prevCt = DETAIL_FILTER.carType;
+  ctSel.innerHTML = '<option value="">全部车型</option>' + [...carTypes].sort().map(ct => `<option value="${ct}">${ct}</option>`).join('');
+  if (prevCt && [...carTypes].includes(prevCt)) ctSel.value = prevCt;
+}
+
+function getFilteredProd(){
+  const {prod, att, exc} = window._DATA;
+  let fp = prod, fa = att, fe = exc || [];
+  if (FILTER.month){
+    const [y,m] = FILTER.month.split('-').map(Number);
+    fp = fp.filter(r => r.year === y && r.month === m);
+    fa = fa.filter(a => a.year === y && a.month === m);
+    fe = fe.filter(e => e.year === y && e.month === m);
+  }
+  if (FILTER.week){
+    const [y, wstr] = FILTER.week.split('-');
+    const wk = parseInt(wstr.replace('CW',''));
+    fp = fp.filter(r => r.year === Number(y) && r.week === wk);
+    fa = fa.filter(a => a.year === Number(y) && a.week === wk);
+    fe = fe.filter(e => e.year === Number(y) && e.week === wk);
+  }
+  if (FILTER.search){
+    const s = FILTER.search.toLowerCase();
+    fp = fp.filter(r => String(r.workStation).toLowerCase().includes(s) || String(r.carType).toLowerCase().includes(s) || fmtDate(r.date).includes(s));
+    fa = fa.filter(a => String(a.workStation).toLowerCase().includes(s) || fmtDate(a.date).includes(s) || String(a.note||'').toLowerCase().includes(s));
+    fe = fe.filter(e => String(e.workStation).toLowerCase().includes(s) || fmtDate(e.date).includes(s) || String(e.type||'').toLowerCase().includes(s) || String(e.note||'').toLowerCase().includes(s));
+  }
+  return {fp, fa, fe};
+}
+
+function renderKPI(){
+  const {fp, fa, fe} = getFilteredProd();
+  // 聚合 by 工位
+  const by1F = aggregate(fp.filter(r=>r.workStation==='1F'), fa.filter(a=>a.workStation==='1F'), ()=>'all', fe.filter(e=>e.workStation==='1F'));
+  const by2F = aggregate(fp.filter(r=>r.workStation==='2F'), fa.filter(a=>a.workStation==='2F'), ()=>'all', fe.filter(e=>e.workStation==='2F'));
+  const b1 = by1F['all|1F'] || {stdHour:0, inputHour:0, ope:null, excHour:0, netOpe:null};
+  const b2 = by2F['all|2F'] || {stdHour:0, inputHour:0, ope:null, excHour:0, netOpe:null};
+  const totalStd = b1.stdHour + b2.stdHour;
+  const totalIn = b1.inputHour + b2.inputHour;
+  const totalExc = b1.excHour + b2.excHour;
+  const overallOpe = totalIn > 0 ? totalStd / totalIn : null;
+  const excRate = totalIn > 0 ? totalExc / totalIn : null;
+  const netOpe = (totalIn - totalExc) > 0 ? totalStd / (totalIn - totalExc) : null;
+
+  const cards = [
+    {label:'1F OPE', value: pct(b1.ope), cls:'green', unit:'', bar:b1.ope, delta:`标准 ${num(b1.stdHour,0)}H / 投入 ${num(b1.inputHour,0)}H`},
+    {label:'2F OPE', value: pct(b2.ope), cls:'purple', unit:'', bar:b2.ope, delta:`标准 ${num(b2.stdHour,0)}H / 投入 ${num(b2.inputHour,0)}H`},
+    {label:'综合 OPE', value: pct(overallOpe), cls:'orange', unit:'', bar:overallOpe, delta:`1F+2F 合计`},
+    {label:'净 OPE', value: pct(netOpe), cls:'cyan', unit:'', bar:netOpe, delta:`扣异常后 / vs 综合 ${pct(overallOpe)}`},
+    {label:'标准工时合计', value: num(totalStd,0), cls:'cyan', unit:'H', bar:totalStd/(totalStd+1), delta:`1F ${num(b1.stdHour,0)} + 2F ${num(b2.stdHour,0)}`},
+    {label:'投入工时合计', value: num(totalIn,0), cls:'red', unit:'H', bar:totalIn/(totalIn+1), delta:`1F ${num(b1.inputHour,0)} + 2F ${num(b2.inputHour,0)}`},
+    {label:'异常工时合计', value: num(totalExc,0), cls:'red', unit:'H', bar:totalExc/(totalIn+1), delta:`1F ${num(b1.excHour,0)} + 2F ${num(b2.excHour,0)}`},
+    {label:'异常工时占比', value: pct(excRate), cls:'orange', unit:'', bar:excRate, delta:`异常 ${num(totalExc,0)}H / 投入 ${num(totalIn,0)}H`},
+  ];
+  document.getElementById('kpiRow').innerHTML = cards.map(c => `
+    <div class="kpi ${c.cls}">
+      <div class="kpi-label"><span class="dot"></span>${c.label}</div>
+      <div class="kpi-value">${c.value}<span class="unit">${c.unit}</span></div>
+      <div class="kpi-delta">${c.delta}</div>
+      <div class="kpi-bar"><span style="width:${Math.min(100, (c.bar||0)*100)}%;background:var(--${c.cls==='green'?'green':c.cls==='purple'?'purple':c.cls==='orange'?'orange':c.cls==='cyan'?'cyan':'red'})"></span></div>
+    </div>
+  `).join('');
+}
+
+function renderAnalysis(){
+  const {fp, fa, fe} = getFilteredProd();
+  const by1F = aggregate(fp.filter(r=>r.workStation==='1F'), fa.filter(a=>a.workStation==='1F'), ()=>'all', fe.filter(e=>e.workStation==='1F'));
+  const by2F = aggregate(fp.filter(r=>r.workStation==='2F'), fa.filter(a=>a.workStation==='2F'), ()=>'all', fe.filter(e=>e.workStation==='2F'));
+  const b1 = by1F['all|1F'] || {stdHour:0, inputHour:0, ope:null, qty:0, excHour:0, netOpe:null};
+  const b2 = by2F['all|2F'] || {stdHour:0, inputHour:0, ope:null, qty:0, excHour:0, netOpe:null};
+  const totalIn = b1.inputHour + b2.inputHour;
+  const totalExc = b1.excHour + b2.excHour;
+
+  let cls = 'ok', title = '✓ 数据正常', body = '';
+  const cmp = (b1.ope||0) - (b2.ope||0);
+  if (b1.ope != null && b2.ope != null){
+    if (cmp > 0.05){
+      cls = 'ok'; title = '📈 1F OPE 领先';
+      body = `当前筛选下，<b>1F OPE ${pct(b1.ope)}</b> 高于 <b>2F ${pct(b2.ope)}</b>，差距 <b class="hl-green">${(cmp*100).toFixed(1)}个百分点</b>。1F 标准工时 ${num(b1.stdHour,0)}H / 投入 ${num(b1.inputHour,0)}H，2F 标准工时 ${num(b2.stdHour,0)}H / 投入 ${num(b2.inputHour,0)}H。`;
+    } else if (cmp < -0.05){
+      cls = 'warn'; title = '📉 2F OPE 领先';
+      body = `当前筛选下，<b>2F OPE ${pct(b2.ope)}</b> 高于 <b>1F ${pct(b1.ope)}</b>，差距 <b class="hl-orange">${Math.abs(cmp*100).toFixed(1)}个百分点</b>。1F 标准工时 ${num(b1.stdHour,0)}H / 投入 ${num(b1.inputHour,0)}H，2F 标准工时 ${num(b2.stdHour,0)}H / 投入 ${num(b2.inputHour,0)}H。`;
+    } else {
+      cls = ''; title = '⚖ 1F / 2F 基本持平';
+      body = `当前筛选下，1F OPE <b>${pct(b1.ope)}</b>，2F OPE <b>${pct(b2.ope)}</b>，两者差距在 5 个百分点以内。1F 标准工时 ${num(b1.stdHour,0)}H / 投入 ${num(b1.inputHour,0)}H；2F 标准工时 ${num(b2.stdHour,0)}H / 投入 ${num(b2.inputHour,0)}H。`;
+    }
+  } else {
+    cls = 'warn'; title = '⚠ OPE 无法计算';
+    body = `部分工位缺少标准工时或投入工时数据。1F OPE=${pct(b1.ope)}，2F OPE=${pct(b2.ope)}。请确认"车型标准"sheet 中各车型工序时间已填写，且"出勤工时表"对应日期有数据。`;
+  }
+
+  // 缺失车型提示
+  const missing = fp.filter(r => r.missingStd);
+  if (missing.length > 0){
+    const missingTypes = [...new Set(missing.map(r => `${r.workStation}:${r.carType}`))];
+    body += `<br><b class="hl-orange">⚠ 标准工时缺失</b>：以下车型在"车型标准"sheet 中无对应记录：${missingTypes.slice(0,10).join('、')}${missingTypes.length>10?'...':''}`;
+  }
+
+  // 异常工时分析
+  if (fe.length > 0 && totalExc > 0){
+    const excRate = totalIn > 0 ? totalExc / totalIn : 0;
+    // 按类型统计
+    const byType = {};
+    for (const e of fe){
+      byType[e.type] = (byType[e.type] || 0) + e.excHour;
+    }
+    const typeList = Object.entries(byType).sort((a,b) => b[1] - a[1]);
+    const topType = typeList[0];
+    const topRate = totalExc > 0 ? topType[1] / totalExc : 0;
+    // 1F vs 2F 异常对比
+    const exc1FRate = b1.inputHour > 0 ? b1.excHour / b1.inputHour : 0;
+    const exc2FRate = b2.inputHour > 0 ? b2.excHour / b2.inputHour : 0;
+    const worseWS = exc1FRate > exc2FRate ? '1F' : '2F';
+    const worseRate = Math.max(exc1FRate, exc2FRate);
+    body += `<br><b class="hl-red">⚠ 异常工时</b>：合计 <b>${num(totalExc,0)}H</b>（占投入工时 <b>${(excRate*100).toFixed(1)}%</b>），共 ${fe.length} 条记录。主要损失类型为 <b>${topType[0]}</b>（${num(topType[1],0)}H，占异常 ${(topRate*100).toFixed(0)}%）。<b>${worseWS}</b> 异常占比偏高（${(worseRate*100).toFixed(1)}%）。扣除异常后，1F 净 OPE ${pct(b1.netOpe)} / 2F 净 OPE ${pct(b2.netOpe)}。`;
+  }
+
+  document.getElementById('analysisBox').innerHTML = `
+    <div class="analysis-panel ${cls}" style="margin-bottom:16px;">
+      <div class="analysis-title">${title}</div>
+      <div class="analysis-body">${body}</div>
+    </div>
+  `;
+}
+
+function renderCompareChart(){
+  const {fp, fa} = getFilteredProd();
+  let labels, data1F, data2F, title, sub;
+  if (VIEW === 'month'){
+    // 按月聚合
+    const months = new Set();
+    fp.forEach(r => months.add(`${r.year}-${String(r.month).padStart(2,'0')}`));
+    fa.forEach(a => months.add(`${a.year}-${String(a.month).padStart(2,'0')}`));
+    labels = [...months].sort();
+    const agg = (arr, ws) => {
+      const d = {};
+      arr.filter(r=>r.workStation===ws).forEach(r => {
+        const k = `${r.year}-${String(r.month).padStart(2,'0')}`;
+        if (!d[k]) d[k] = {stdHour:0, inputHour:0};
+        if (r.stdTimeHour != null) d[k].stdHour += r.stdTimeHour;
+      });
+      return d;
+    };
+    const attAgg = (arr, ws) => {
+      const d = {};
+      arr.filter(a=>a.workStation===ws).forEach(a => {
+        const k = `${a.year}-${String(a.month).padStart(2,'0')}`;
+        if (!d[k]) d[k] = {hours:0};
+        d[k].hours += a.hours;
+      });
+      return d;
+    };
+    const p1 = agg(fp, '1F'), p2 = agg(fp, '2F');
+    const a1 = attAgg(fa, '1F'), a2 = attAgg(fa, '2F');
+    data1F = labels.map(k => {
+      const std = (p1[k]?.stdHour)||0;
+      const inp = (a1[k]?.hours)||0;
+      return inp > 0 ? std / inp : null;
+    });
+    data2F = labels.map(k => {
+      const std = (p2[k]?.stdHour)||0;
+      const inp = (a2[k]?.hours)||0;
+      return inp > 0 ? std / inp : null;
+    });
+    title = '月度 OPE 对比';
+    sub = `${labels.length} 个月`;
+  } else if (VIEW === 'week'){
+    const weeks = new Set();
+    fp.forEach(r => weeks.add(`${r.year}-CW${String(r.week).padStart(2,'0')}`));
+    fa.forEach(a => weeks.add(`${a.year}-CW${String(a.week).padStart(2,'0')}`));
+    labels = [...weeks].sort();
+    const agg = (arr, ws) => {
+      const d = {};
+      arr.filter(r=>r.workStation===ws).forEach(r => {
+        const k = `${r.year}-CW${String(r.week).padStart(2,'0')}`;
+        if (!d[k]) d[k] = {stdHour:0, inputHour:0};
+        if (r.stdTimeHour != null) d[k].stdHour += r.stdTimeHour;
+      });
+      return d;
+    };
+    const attAgg = (arr, ws) => {
+      const d = {};
+      arr.filter(a=>a.workStation===ws).forEach(a => {
+        const k = `${a.year}-CW${String(a.week).padStart(2,'0')}`;
+        if (!d[k]) d[k] = {hours:0};
+        d[k].hours += a.hours;
+      });
+      return d;
+    };
+    const p1 = agg(fp, '1F'), p2 = agg(fp, '2F');
+    const a1 = attAgg(fa, '1F'), a2 = attAgg(fa, '2F');
+    data1F = labels.map(k => {const std=(p1[k]?.stdHour)||0;const inp=(a1[k]?.hours)||0;return inp>0?std/inp:null;});
+    data2F = labels.map(k => {const std=(p2[k]?.stdHour)||0;const inp=(a2[k]?.hours)||0;return inp>0?std/inp:null;});
+    title = '周度 OPE 对比';
+    sub = `${labels.length} 周`;
+  } else {
+    // daily
+    let days = new Set();
+    fp.forEach(r => days.add(fmtDate(r.date)));
+    fa.forEach(a => days.add(fmtDate(a.date)));
+    if (VIEW === 'daily_aug'){
+      days = new Set([...days].filter(d => d.startsWith('2026-08')));
+    }
+    labels = [...days].sort();
+    const agg = (arr, ws) => {
+      const d = {};
+      arr.filter(r=>r.workStation===ws).forEach(r => {
+        const k = fmtDate(r.date);
+        if (!d[k]) d[k] = {stdHour:0};
+        if (r.stdTimeHour != null) d[k].stdHour += r.stdTimeHour;
+      });
+      return d;
+    };
+    const attAgg = (arr, ws) => {
+      const d = {};
+      arr.filter(a=>a.workStation===ws).forEach(a => {
+        const k = fmtDate(a.date);
+        if (!d[k]) d[k] = {hours:0};
+        d[k].hours += a.hours;
+      });
+      return d;
+    };
+    const p1 = agg(fp, '1F'), p2 = agg(fp, '2F');
+    const a1 = attAgg(fa, '1F'), a2 = attAgg(fa, '2F');
+    data1F = labels.map(k => {const std=(p1[k]?.stdHour)||0;const inp=(a1[k]?.hours)||0;return inp>0?std/inp:null;});
+    data2F = labels.map(k => {const std=(p2[k]?.stdHour)||0;const inp=(a2[k]?.hours)||0;return inp>0?std/inp:null;});
+    title = (VIEW==='daily_aug'?'八月每日':'全部每日') + ' OPE 对比';
+    sub = `${labels.length} 天`;
+  }
+
+  document.getElementById('compareTitle').textContent = title;
+  document.getElementById('compareSub').textContent = sub;
+
+  if (!chartCompare) chartCompare = echarts.init(document.getElementById('chartCompare'));
+  chartCompare.setOption({
+    tooltip:{trigger:'axis', formatter: params => {
+      let s = params[0].axisValue + '<br/>';
+      params.forEach(p => {
+        const v = p.value==null?'--':(p.value*100).toFixed(1)+'%';
+        s += `${p.marker}${p.seriesName}: <b>${v}</b><br/>`;
+      });
+      return s;
+    }},
+    legend:{data:['1F OPE','2F OPE'], top:5},
+    grid:{left:50, right:30, top:50, bottom:60},
+    xAxis:{type:'category', data:labels, axisLabel:{rotate: labels.length>10?40:0}},
+    yAxis:{type:'value', axisLabel:{formatter: v => (v*100).toFixed(0)+'%'}},
+    series:[
+      {name:'1F OPE', type:'bar', data:data1F, itemStyle:{color:'#2f6fe0'}, barWidth:'30%'},
+      {name:'2F OPE', type:'bar', data:data2F, itemStyle:{color:'#7c3aed'}, barWidth:'30%'},
+      {name:'1F 趋势', type:'line', data:data1F, lineStyle:{color:'#2f9e44', width:2}, itemStyle:{color:'#2f9e44'}, smooth:true, symbol:'circle', symbolSize:6},
+    ],
+  });
+}
+
+function renderWeekChart(){
+  const {fp, fa} = getFilteredProd();
+  // 按周聚合
+  const weeks = new Set();
+  fp.forEach(r => weeks.add(`${r.year}-CW${String(r.week).padStart(2,'0')}`));
+  fa.forEach(a => weeks.add(`${a.year}-CW${String(a.week).padStart(2,'0')}`));
+  const labels = [...weeks].sort();
+  const agg = (arr, ws) => {
+    const d = {};
+    arr.filter(r=>r.workStation===ws).forEach(r => {
+      const k = `${r.year}-CW${String(r.week).padStart(2,'0')}`;
+      if (!d[k]) d[k] = {stdHour:0, inputHour:0, qty:0};
+      if (r.stdTimeHour != null) d[k].stdHour += r.stdTimeHour;
+      d[k].qty += r.quantity;
+    });
+    return d;
+  };
+  const attAgg = (arr, ws) => {
+    const d = {};
+    arr.filter(a=>a.workStation===ws).forEach(a => {
+      const k = `${a.year}-CW${String(a.week).padStart(2,'0')}`;
+      if (!d[k]) d[k] = {hours:0, hc:0};
+      d[k].hours += a.hours;
+      d[k].hc += a.headcount;
+    });
+    return d;
+  };
+  const p1 = agg(fp, '1F'), p2 = agg(fp, '2F');
+  const a1 = attAgg(fa, '1F'), a2 = attAgg(fa, '2F');
+  const data1F = labels.map(k => {const std=(p1[k]?.stdHour)||0;const inp=(a1[k]?.hours)||0;return inp>0?std/inp:null;});
+  const data2F = labels.map(k => {const std=(p2[k]?.stdHour)||0;const inp=(a2[k]?.hours)||0;return inp>0?std/inp:null;});
+
+  document.getElementById('weekSub').textContent = `${labels.length} 周 · 最新: 1F=${pct(data1F[data1F.length-1])} / 2F=${pct(data2F[data2F.length-1])}`;
+
+  if (!chartWeek) chartWeek = echarts.init(document.getElementById('chartWeek'));
+  chartWeek.setOption({
+    tooltip:{trigger:'axis', formatter: params => {
+      let s = params[0].axisValue + '<br/>';
+      params.forEach(p => {
+        const v = p.value==null?'--':(p.value*100).toFixed(1)+'%';
+        s += `${p.marker}${p.seriesName}: <b>${v}</b><br/>`;
+      });
+      return s;
+    }},
+    legend:{data:['1F OPE','2F OPE'], top:5},
+    grid:{left:50, right:30, top:50, bottom:50},
+    xAxis:{type:'category', data:labels, axisLabel:{rotate: labels.length>15?40:0}},
+    yAxis:{type:'value', axisLabel:{formatter: v => (v*100).toFixed(0)+'%'}},
+    series:[
+      {name:'1F OPE', type:'line', data:data1F, smooth:true, itemStyle:{color:'#2f6fe0'}, lineStyle:{width:2.5}, symbol:'circle', symbolSize:7, areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(47,111,224,.18)'},{offset:1,color:'rgba(47,111,224,0)'}]}}},
+      {name:'2F OPE', type:'line', data:data2F, smooth:true, itemStyle:{color:'#7c3aed'}, lineStyle:{width:2.5}, symbol:'circle', symbolSize:7, areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(124,58,237,.18)'},{offset:1,color:'rgba(124,58,237,0)'}]}}},
+    ],
+  });
+}
+
+function renderHoursChart(){
+  const {fp, fa} = getFilteredProd();
+  // 按月聚合标准工时 vs 投入工时
+  const months = new Set();
+  fp.forEach(r => months.add(`${r.year}-${String(r.month).padStart(2,'0')}`));
+  fa.forEach(a => months.add(`${a.year}-${String(a.month).padStart(2,'0')}`));
+  const labels = [...months].sort();
+  const stdAgg = (arr, ws) => {
+    const d = {};
+    arr.filter(r=>r.workStation===ws).forEach(r => {
+      const k = `${r.year}-${String(r.month).padStart(2,'0')}`;
+      if (!d[k]) d[k] = 0;
+      if (r.stdTimeHour != null) d[k] += r.stdTimeHour;
+    });
+    return d;
+  };
+  const attAgg = (arr, ws) => {
+    const d = {};
+    arr.filter(a=>a.workStation===ws).forEach(a => {
+      const k = `${a.year}-${String(a.month).padStart(2,'0')}`;
+      if (!d[k]) d[k] = 0;
+      d[k] += a.hours;
+    });
+    return d;
+  };
+  const s1 = stdAgg(fp,'1F'), s2 = stdAgg(fp,'2F');
+  const i1 = attAgg(fa,'1F'), i2 = attAgg(fa,'2F');
+  const std1F = labels.map(k => +(s1[k]||0).toFixed(1));
+  const std2F = labels.map(k => +(s2[k]||0).toFixed(1));
+  const inp1F = labels.map(k => +(i1[k]||0).toFixed(1));
+  const inp2F = labels.map(k => +(i2[k]||0).toFixed(1));
+
+  document.getElementById('hoursSub').textContent = `${labels.length} 月 · 标准工时 vs 投入工时`;
+
+  if (!chartHours) chartHours = echarts.init(document.getElementById('chartHours'));
+  chartHours.setOption({
+    tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+    legend:{data:['1F 标准工时','1F 投入工时','2F 标准工时','2F 投入工时'], top:5},
+    grid:{left:50, right:30, top:50, bottom:50},
+    xAxis:{type:'category', data:labels},
+    yAxis:{type:'value', name:'H'},
+    series:[
+      {name:'1F 标准工时', type:'bar', data:std1F, itemStyle:{color:'#2f6fe0'}, stack:'1F'},
+      {name:'1F 投入工时', type:'line', data:inp1F, itemStyle:{color:'#1e5fbf'}, lineStyle:{width:2,type:'dashed'}},
+      {name:'2F 标准工时', type:'bar', data:std2F, itemStyle:{color:'#7c3aed'}, stack:'2F'},
+      {name:'2F 投入工时', type:'line', data:inp2F, itemStyle:{color:'#5b21b6'}, lineStyle:{width:2,type:'dashed'}},
+    ],
+  });
+}
+
+function renderExceptionChart(){
+  const {fe} = getFilteredProd();
+  // 按周期聚合异常工时，按类型堆叠
+  let labels;
+  const keyFn = VIEW === 'month' ? e => `${e.year}-${String(e.month).padStart(2,'0')}`
+    : VIEW === 'week' ? e => `${e.year}-CW${String(e.week).padStart(2,'0')}`
+    : e => fmtDate(e.date);
+  const periods = new Set();
+  for (const e of fe) periods.add(keyFn(e));
+  labels = [...periods].sort();
+  // 收集所有异常类型
+  const types = new Set();
+  for (const e of fe) types.add(e.type || '未分类');
+  const typeList = [...types];
+  const series = typeList.map(t => ({
+    name: t, type:'bar', stack:'异常',
+    data: labels.map(k => {
+      let sum = 0;
+      for (const e of fe){
+        if (keyFn(e) === k && (e.type || '未分类') === t) sum += e.excHour;
+      }
+      return +sum.toFixed(1);
+    }),
+  }));
+  document.getElementById('excSub').textContent = `${labels.length} 周期 · ${fe.length} 条异常 · 合计 ${num(fe.reduce((s,e)=>s+e.excHour,0),0)}H`;
+  if (!chartException) chartException = echarts.init(document.getElementById('chartException'));
+  chartException.setOption({
+    tooltip:{trigger:'axis', axisPointer:{type:'shadow'}},
+    legend:{top:5, type:'scroll'},
+    grid:{left:50, right:30, top:50, bottom:50},
+    xAxis:{type:'category', data:labels, axisLabel:{rotate: labels.length>10?35:0}},
+    yAxis:{type:'value', name:'H'},
+    series: series,
+  }, true);
+
+  // 饼图：按异常类型占比
+  const typePie = typeList.map(t => {
+    let sum = 0;
+    for (const e of fe){
+      if ((e.type || '未分类') === t) sum += e.excHour;
+    }
+    return {name: t, value: +sum.toFixed(1)};
+  }).sort((a,b) => b.value - a.value);
+  if (!chartExcType) chartExcType = echarts.init(document.getElementById('chartExcType'));
+  chartExcType.setOption({
+    tooltip:{trigger:'item', formatter: p => `${p.marker}${p.name}: <b>${num(p.value,0)}H</b> (${(p.percent).toFixed(1)}%)`},
+    legend:{bottom:0, type:'scroll'},
+    series:[{
+      type:'pie', radius:['38%','68%'], center:['50%','46%'], padAngle:2,
+      label:{formatter: p => `${p.name}\n${(p.percent).toFixed(0)}%`},
+      data: typePie,
+      color:['#d64541','#e07b2e','#f59e0b','#7c3aed','#0891b2','#2f9e44','#64748b'],
+    }],
+  }, true);
+}
+
+function renderDetailTable(){
+  const {fp, fa, fe} = getFilteredProd();
+  // 决定显示什么数据
+  let rows, head;
+  if (VIEW === 'month' || VIEW === 'week'){
+    // 按当前 VIEW 聚合
+    const keyFn = VIEW === 'month' ? r => `${r.year}-${String(r.month).padStart(2,'0')}` : r => `${r.year}-CW${String(r.week).padStart(2,'0')}`;
+    const buckets = {};
+    // 应用数据明细的工位筛选
+    const wsFilter = DETAIL_FILTER.workStation;
+    const wsList = wsFilter ? [wsFilter] : ['1F','2F'];
+    for (const ws of wsList){
+      const f1 = fp.filter(r=>r.workStation===ws);
+      const a1 = fa.filter(a=>a.workStation===ws);
+      const e1 = fe.filter(e=>e.workStation===ws);
+      const b = aggregate(f1, a1, keyFn, e1);
+      for (const k of Object.keys(b)){
+        const [period, w] = k.split('|');
+        buckets[`${period}|${w}`] = {...b[k], period, workStation:w};
+      }
+    }
+    head = ['周期','工位','产量','标准工时/H','投入工时/H','异常工时/H','OPE','净OPE'];
+    rows = Object.values(buckets).sort((a,b) => a.period.localeCompare(b.period) || a.workStation.localeCompare(b.workStation)).map(r => [
+      r.period, r.workStation, r.qty, num(r.stdHour,1), num(r.inputHour,1), num(r.excHour,1), pct(r.ope), pct(r.netOpe)
+    ]);
+    // 排序
+    rows = sortDetailRows(rows, head, [0,1]);  // 按 周期+工位
+  } else {
+    // daily 明细 - 应用工位 + 车型筛选
+    const wsFilter = DETAIL_FILTER.workStation;
+    const ctFilter = DETAIL_FILTER.carType;
+    let fprod = fp;
+    if (wsFilter) fprod = fprod.filter(r => r.workStation === wsFilter);
+    if (ctFilter){
+      fprod = fprod.filter(r => {
+        const ct = r.carType ? r.carType : '(空车型)';
+        return ct === ctFilter;
+      });
+    }
+    head = ['日期','周','月份','工位','车型','数量','标准工时/H','投入工时/H','异常工时/H','OPE'];
+    // 投入工时 + 异常工时 lookup
+    const attMap = {};
+    fa.forEach(a => {attMap[`${fmtDate(a.date)}|${a.workStation}`] = a;});
+    const excMap = {};
+    fe.forEach(e => {
+      const k = `${fmtDate(e.date)}|${e.workStation}`;
+      if (!excMap[k]) excMap[k] = 0;
+      excMap[k] += e.excHour;
+    });
+    rows = fprod.map(r => {
+      const att = attMap[`${fmtDate(r.date)}|${r.workStation}`];
+      const inp = att?.hours || 0;
+      const exc = excMap[`${fmtDate(r.date)}|${r.workStation}`] || 0;
+      const ope = inp>0 && r.stdTimeHour!=null ? r.stdTimeHour/inp : null;
+      return [fmtDate(r.date), 'CW'+String(r.week).padStart(2,'0'), r.month+'月', r.workStation, r.carType || '(空车型)', r.quantity, num(r.stdTimeHour,2), num(inp,1), num(exc,1), pct(ope), r.date];
+    });
+    // 移除用于排序的临时 r.date 列 (index 10)
+    rows = sortDetailRows(rows, head, [0,4]);
+    rows = rows.map(r => r.slice(0, 10));  // 丢弃临时列
+  }
+  document.getElementById('detailHead').innerHTML = head.map((h,i) => `<th style="text-align:${i===0?'left':'right'}">${h}</th>`).join('');
+  document.getElementById('detailBody').innerHTML = rows.length === 0
+    ? '<tr><td colspan="10" class="empty">无数据</td></tr>'
+    : rows.map(r => `<tr>${r.map((v,i) => `<td style="text-align:${i===0?'left':'right'}${i===r.length-1?'color:var(--accent-2);font-weight:600':''}">${v ?? '--'}</td>`).join('')}</tr>`).join('');
+  document.getElementById('tableSub').textContent = `${rows.length} 条记录`;
+  document.getElementById('filterCount').textContent = `${rows.length} 条`;
+  document.getElementById('detailCount').textContent = `${rows.length} 条`;
+}
+
+// 数据明细排序: rows 是二维数组, cols 是默认排序的列索引数组
+function sortDetailRows(rows, head, defaultCols){
+  const sortBy = DETAIL_FILTER.sortBy;
+  if (sortBy === 'date_asc'){
+    return rows.sort((a,b) => {
+      for (const c of defaultCols){
+        const cmp = String(a[c] ?? '').localeCompare(String(b[c] ?? ''));
+        if (cmp) return cmp;
+      }
+      return 0;
+    });
+  } else if (sortBy === 'date_desc'){
+    return rows.sort((a,b) => {
+      for (let i=defaultCols.length-1; i>=0; i--){
+        const c = defaultCols[i];
+        const cmp = String(a[c] ?? '').localeCompare(String(b[c] ?? ''));
+        if (cmp) return -cmp;
+      }
+      return 0;
+    });
+  } else if (sortBy === 'ope_desc'){
+    // OPE 列 = 最后一列 (索引 head.length-1), 值是 "88.12%" 字符串
+    const opeIdx = head.length - 1;
+    return rows.sort((a,b) => parsePct(b[opeIdx]) - parsePct(a[opeIdx]));
+  } else if (sortBy === 'qty_desc'){
+    // 产量列: daily=col5, month/week=col2
+    const qtyIdx = head.includes('日期') ? 5 : 2;
+    return rows.sort((a,b) => (Number(b[qtyIdx])||0) - (Number(a[qtyIdx])||0));
+  } else if (sortBy === 'std_desc'){
+    // 标准工时列: daily=col6, month/week=col3
+    const stdIdx = head.includes('日期') ? 6 : 3;
+    return rows.sort((a,b) => parseNum(b[stdIdx]) - parseNum(a[stdIdx]));
+  }
+  return rows;
+}
+function parsePct(v){ if (v==null || v==='--') return -1; const m=String(v).match(/([\d.]+)%/); return m?parseFloat(m[1]):-1; }
+function parseNum(v){ if (v==null || v==='--') return -1; return parseFloat(String(v).replace(/[H,]/g,'')) || -1; }
+
+function applyDetailFilter(){
+  DETAIL_FILTER.workStation = document.getElementById('detailWs').value;
+  DETAIL_FILTER.carType = document.getElementById('detailCt').value;
+  DETAIL_FILTER.sortBy = document.getElementById('detailSort').value;
+  renderDetailTable();
+}
+function resetDetailFilter(){
+  DETAIL_FILTER = { workStation: '', carType: '', sortBy: 'date_asc' };
+  document.getElementById('detailWs').value = '';
+  document.getElementById('detailCt').value = '';
+  document.getElementById('detailSort').value = 'date_asc';
+  renderDetailTable();
+}
+
+// ============ 视图/过滤切换 ============
+function switchView(v){
+  VIEW = v;
+  document.querySelectorAll('.filter-bar .chip').forEach(c => c.classList.toggle('active', c.dataset.view === v));
+  // 切换视图时重置 month/week 过滤
+  if (v === 'month'){ document.getElementById('filterWeek').value = ''; FILTER.week=''; }
+  else if (v === 'week'){ document.getElementById('filterMonth').value = ''; FILTER.month=''; }
+  else { document.getElementById('filterMonth').value=''; document.getElementById('filterWeek').value=''; FILTER.month=''; FILTER.week=''; }
+  render();
+}
+function applyFilter(){
+  FILTER.month = document.getElementById('filterMonth').value;
+  FILTER.week = document.getElementById('filterWeek').value;
+  FILTER.search = document.getElementById('searchInput').value.trim();
+  render();
+}
+
+// ============ 同步 ============
+// 静态托管环境检测 (GitHub Pages 等)
+function isStaticHost(){
+  const h = window.location.hostname;
+  return h.includes('github.io') || h.includes('gitlab.io') || h.includes('pages.dev');
+}
+
+async function loadData(){
+  try{
+    // 用相对路径, 这样本地服务器和 GitHub Pages 都能找到 data.json
+    const resp = await fetch('data.json?_=' + Date.now());
+    DATA = await resp.json();
+    if (DATA.error){
+      document.getElementById('status').innerHTML = `<span class="error">⚠ ${DATA.error}</span>`;
+      return;
+    }
+    document.getElementById('syncTime').textContent = DATA.generated_at || '--';
+    // 静态环境标记 + 隐藏同步/连接按钮
+    if (isStaticHost()){
+      const badge = document.getElementById('staticBadge');
+      if (badge) badge.style.display = 'inline-flex';
+      const btnSync = document.getElementById('btnSync');
+      if (btnSync) btnSync.style.display = 'none';
+      const btns = document.querySelectorAll('.actions .btn');
+      btns.forEach(b => { if (b.id !== 'btnSync') b.style.display = 'none'; });
+    }
+    render();
+  } catch(e){
+    document.getElementById('status').innerHTML = `<span class="error">加载失败: ${e}</span>`;
+  }
+}
+async function triggerSync(){
+  if (isStaticHost()){
+    document.getElementById('status').innerHTML = '<span class="error">静态快照环境不能在线同步, 需在本机跑 sync.py 后发布</span>';
+    return;
+  }
+  const btn = document.getElementById('btnSync');
+  btn.disabled = true; btn.textContent = '⟳ 同步中...';
+  document.getElementById('status').innerHTML = '<span>同步中，预计 30-60 秒...</span>';
+  try{
+    const resp = await fetch('api/sync', {method:'POST'});
+    const r = await resp.json();
+    if (r.ok){
+      document.getElementById('status').innerHTML = '<span class="success">✓ 同步成功</span>';
+      await loadData();
+    } else {
+      document.getElementById('status').innerHTML = `<span class="error">✗ 同步失败: ${r.error || r.stderr || ''}</span>`;
+    }
+  } catch(e){
+    document.getElementById('status').innerHTML = `<span class="error">✗ 请求失败: ${e}</span>`;
+  } finally {
+    btn.disabled = false; btn.textContent = '⟳ 同步';
+  }
+}
+async function testCookie(){
+  if (isStaticHost()){
+    document.getElementById('status').innerHTML = '<span class="error">静态环境无 Cookie 概念</span>';
+    return;
+  }
+  document.getElementById('status').innerHTML = '<span>测试连接...</span>';
+  try{
+    const resp = await fetch('api/test-cookie', {method:'POST'});
+    const r = await resp.json();
+    if (r.ok){
+      document.getElementById('status').innerHTML = '<span class="success">✓ Cookie 有效</span>';
+    } else {
+      document.getElementById('status').innerHTML = `<span class="error">✗ Cookie 失效: ${r.error || ''}</span>`;
+    }
+  } catch(e){
+    document.getElementById('status').innerHTML = `<span class="error">✗ 请求失败: ${e}</span>`;
+  }
+}
+
+// ============ 启动 ============
+window.addEventListener('load', () => {
+  loadData();
+  window.addEventListener('resize', () => {
+    chartCompare && chartCompare.resize();
+    chartWeek && chartWeek.resize();
+    chartHours && chartHours.resize();
+  });
+});
+</script>
+</body>
+</html>
