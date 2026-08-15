@@ -43,6 +43,11 @@ jobs:
           mkdir -p _site
           cp index.html _site/index.html
           cp tdoc_data.json _site/
+          # 复制 OPE 看板 (如果有)
+          if [ -d ope ]; then
+            mkdir -p _site/ope
+            cp ope/* _site/ope/
+          fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
