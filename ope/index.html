@@ -352,6 +352,8 @@ function parse2FStd(grid){
 }
 function parseProduction(grid){
   // cols: 0=日期(serial), 1=工位, 2=车型, 3=数量, 4=车型工时(formula), 5=周别, 6=月份
+  // 注意: ct 可能为空 (5月起部分行的车型字段指向 strings 池空字符串，被 sync.py 返回为 None)
+  // 这些"ct=None"行是换型过渡产量，在线表格用 std1F[None]=98s (无名车型行) 计算，不能跳过
   const records = [];
   for (let r=1; r<grid.length; r++){
     const row = grid[r];
@@ -359,7 +361,7 @@ function parseProduction(grid){
     const ws = row[1];
     const ct = row[2];
     const qty = row[3];
-    if (typeof ds !== 'number' || !ws || !ct || typeof qty !== 'number') continue;
+    if (typeof ds !== 'number' || !ws || typeof qty !== 'number') continue;
     const date = excelSerialToDate(ds);
     records.push({
       date, dateSerial: ds,
@@ -1043,10 +1045,16 @@ function renderDetailTable(){
     rows = sortDetailRows(rows, head, [0,4]);
     rows = rows.map(r => r.slice(0, 10));  // 丢弃临时列
   }
-  document.getElementById('detailHead').innerHTML = head.map((h,i) => `<th style="text-align:${i===0?'left':'right'}">${h}</th>`).join('');
+  document.getElementById('detailHead').innerHTML = head.map((h,i) => `<th style="text-align:${h==='OPE'?'center':(i===0?'left':'right')}">${h}</th>`).join('');
   document.getElementById('detailBody').innerHTML = rows.length === 0
     ? '<tr><td colspan="10" class="empty">无数据</td></tr>'
-    : rows.map(r => `<tr>${r.map((v,i) => `<td style="text-align:${i===0?'left':'right'}${i===r.length-1?'color:var(--accent-2);font-weight:600':''}">${v ?? '--'}</td>`).join('')}</tr>`).join('');
+    : rows.map(r => `<tr>${r.map((v,i) => {
+        const h = head[i] || '';
+        const align = h==='OPE' ? 'center' : (i===0?'left':'right');
+        const isLast = i===r.length-1;
+        const extra = isLast ? 'color:var(--accent-2);font-weight:600;' : '';
+        return `<td style="text-align:${align};${extra}">${v ?? '--'}</td>`;
+      }).join('')}</tr>`).join('');
   document.getElementById('tableSub').textContent = `${rows.length} 条记录`;
   document.getElementById('filterCount').textContent = `${rows.length} 条`;
   document.getElementById('detailCount').textContent = `${rows.length} 条`;
